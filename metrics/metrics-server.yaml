@@ -138,7 +138,7 @@ spec:
         - --kubelet-use-node-status-port
         - --metric-resolution=15s
         - --kubelet-insecure-tls
-        image:  ccr.ccs.tencentyun.com/mirrors/metrics-server:v0.5.0
+        image:  registry.cn-hangzhou.aliyuncs.com/zailushang/metrics-server:v0.6.0
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
