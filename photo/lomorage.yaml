@@ -1,0 +1,116 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lomorage
+  namespace: default
+  labels:
+    app: lomorage
+spec:  
+  replicas: 1 # 启动1个pod实列
+  selector:
+    matchLabels:
+      app: lomorage
+  template:
+    metadata:
+      labels:
+        app: lomorage
+    spec:
+      imagePullSecrets:
+      - name: tencent-docker-secret
+      restartPolicy: Always # 总是重启pod
+      containers:
+        - name: lomorage
+          image: lomorage/amd64-lomorage:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 3
+              memory: 1024Mi
+            requests:
+              cpu: 1
+              memory: 128Mi
+          volumeMounts:
+          - mountPath: /media/primary  
+            name: primary          
+          #- mountPath: /dev  
+          #  name: dev          
+          - mountPath: /media/backup  
+            name: backup          
+          - mountPath: /lomo  
+            name: lomo           
+      volumes:
+      - name: primary             #卷名称
+        nfs:                        #使用NFS网络存储卷
+          server: 10.0.4.11    #NFS服务器地址
+          path: /opt/project/nfs/lomorage/media/primary          #NFS服务器共享的目录
+          readOnly: true          #是否为只读
+      - name: dev             #卷名称
+        nfs:                        #使用NFS网络存储卷
+          server: 10.0.4.11    #NFS服务器地址
+          path: /opt/project/nfs/lomorage/dev         #NFS服务器共享的目录
+          readOnly: false          #是否为只读
+      - name: backup             #卷名称
+        nfs: #使用NFS网络存储卷
+          server: 10.0.4.11    #NFS服务器地址
+          path: /opt/project/nfs/lomorage/media/backup         #NFS服务器共享的目录
+          readOnly: false          #是否为只读
+      - name: lomo             #卷名称
+        nfs: #使用NFS网络存储卷
+          server: 10.0.4.11    #NFS服务器地址
+          path: /opt/project/nfs/lomorage/lomo         #NFS服务器共享的目录
+          readOnly: false          #是否为只读    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lomorage-service
+  namespace: default
+spec:
+  selector:
+    app: lomorage
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-lomorage-service
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-body-size: 1024m
+spec:
+  tls:
+    - hosts:
+        - lomorage.zflzqy.cn
+      secretName: lomorage-zflzqy-cn-tls
+  rules:
+  - host: lomorage.zflzqy.cn
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: lomorage-service
+            port:
+              number: 8000

@@ -1,0 +1,130 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: photoprism-secrets
+stringData:
+  PHOTOPRISM_ADMIN_PASSWORD: EN819968
+  #PHOTOPRISM_DATABASE_DSN: photoprism:Photoprism_123456@tcp(10.0.4.11:3306)/photoprism?charset=utf8mb4,utf8&parseTime=true
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: photoprism
+spec:
+  selector:
+    matchLabels:
+      app: photoprism
+  serviceName: photoprism
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: photoprism
+    spec:
+      containers:
+      - name: photoprism
+        imagePullPolicy: IfNotPresent
+        image: photoprism/photoprism:latest
+        env:
+        - name: PHOTOPRISM_DEBUG
+          value: "true"
+        - name: PHOTOPRISM_CACHE_PATH
+          value: /assets/cache
+        - name: PHOTOPRISM_IMPORT_PATH
+          value: /assets/photos/import
+        - name: PHOTOPRISM_EXPORT_PATH
+          value: /assets/photos/export
+        - name: PHOTOPRISM_ORIGINALS_PATH
+          value: /assets/photos/originals
+        - name: PHOTOPRISM_DATABASE_DRIVER
+          value: 
+        - name: PHOTOPRISM_HTTP_HOST
+          value: 0.0.0.0
+        - name: PHOTOPRISM_HTTP_PORT
+          value: "2342"
+        # Load database DSN & admin password from secret
+        envFrom:
+        - secretRef:
+            name: photoprism-secrets
+            optional: false
+        ports:
+        - containerPort: 2342
+          name: http
+        volumeMounts:
+        - mountPath: /assets/photos/originals
+          name: originals
+        - mountPath: /photoprism/storage
+          name: storage
+        - mountPath: /assets/cache
+          name: photoprism
+          subPath: cache
+        - mountPath: /assets/photos/import
+          name: photoprism
+          subPath: import
+        - mountPath: /assets/photos/export
+          name: photoprism
+          subPath: export
+        readinessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: http
+      volumes:
+      - name: originals
+        nfs:
+          path: /opt/project/nfs/lomorage/media/backup/zflzqy/Photos/master
+          readOnly: true
+          server: 10.0.4.11
+      - name: photoprism
+        nfs:
+          path: /opt/project/nfs/photoprism
+          server: 10.0.4.11
+      - name: storage
+        nfs:
+          readOnly: false
+          path: /opt/project/nfs/photoprism/storage
+          server: 10.0.4.11
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: photoprism
+spec:
+  ports:
+  - name: http
+    port: 2342
+    protocol: TCP
+    targetPort: 2342
+  selector:
+    app: photoprism
+    
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    # For nginx ingress controller:
+    kubernetes.io/ingress.class: nginx
+    # Default is very low so most photo uploads will fail
+    nginx.ingress.kubernetes.io/proxy-body-size: "512M"
+    # If using cert-manager:
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/tls-acme: "true"
+  name: photoprism
+spec:
+  rules:
+  - host: photoprism.zflzqy.cn
+    http:
+      paths:
+      - backend:
+          service:
+            name: photoprism
+            port:
+              number: 2342
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - photoprism.zflzqy.cn
+    secretName: photoprism-zflzqy-cn-tls

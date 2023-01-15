@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: kibana
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: kibana
+          image: kibana:7.16.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5601
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: http://10.0.4.11:9200
+            - name: I18N.LOCALE
+              value: zh-CN    #汉化
+          resources:
+            requests:
+              memory: 1024Mi
+              cpu: 50m
+            limits:
+              memory: 1024Mi
+              cpu: 1000m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+    - name: kibana
+      port: 5601
+      targetPort: 5601
+      nodePort: 15601
+  selector:
+    app: kibana
