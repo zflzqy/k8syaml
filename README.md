@@ -1,3 +1,4 @@
+部署基于K8S版本 v1.25.0
 目录说明
 ```language
 init.yaml：k8s部署的初始文件|
