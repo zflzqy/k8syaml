@@ -1,0 +1,125 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatgpt
+  namespace: default
+  labels:
+    app: chatgpt
+spec:  
+  replicas: 1 # 启动1个pod实列
+  selector:
+    matchLabels:
+      app: chatgpt
+  template:
+    metadata:
+      labels:
+        app: chatgpt
+    spec:
+      imagePullSecrets:
+      - name: tencent-docker-secret
+      restartPolicy: Always # 总是重启pod
+      containers:
+        - name: chatgpt
+          image: ccr.ccs.tencentyun.com/zflzqy/chatgpt-next-web:latest
+          imagePullPolicy: Always
+          ports:
+            - name: clash
+              containerPort: 9090
+            - name: gpt        
+              containerPort: 3000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatgpt-api-key
+                  key: api-key
+            - name: CODE
+              value: "zfl_123456@ZQY"
+          readinessProbe:
+            httpGet:
+              port: 3000
+              path: /
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            limits:
+              cpu: 3
+              memory: 1024Mi
+            requests:
+              cpu: 1
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatgpt-service
+  namespace: default
+spec:
+  selector:
+    app: chatgpt
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+    - name: clash-port
+      port: 9090
+      targetPort:  9090
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-chatgpt-service
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+spec:
+  tls:
+    - hosts:
+        - chatgpt.zflzqy.cn
+      secretName: chatgpt-zflzqy-cn-tls
+  rules:
+  - host: chatgpt.zflzqy.cn
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: chatgpt-service
+            port:
+              number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-clash-service
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+spec:
+  tls:
+    - hosts:
+        - clash.zflzqy.cn
+      secretName: clash-zflzqy-cn-tls
+  rules:
+  - host: clash.zflzqy.cn
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: chatgpt-service
+            port:
+              number: 9090
