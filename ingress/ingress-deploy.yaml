@@ -37,6 +37,7 @@ metadata:
   namespace: ingress-nginx
 data:
   allow-snippet-annotations: 'true'
+  http-redirect-code: "301"
 ---
 # Source: ingress-nginx/templates/clusterrole.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -285,14 +286,14 @@ spec:
       protocol: TCP
       targetPort: http
       appProtocol: http
-      # ×Ô¶¨Òå±©Â¶µÄhttp¶Ë¿Ú
+      # ï¿½Ô¶ï¿½ï¿½å±©Â¶ï¿½ï¿½httpï¿½Ë¿ï¿½
       nodePort: 80
     - name: https
       port: 443
       protocol: TCP
       targetPort: https
       appProtocol: https
-      # ×Ô¶¨Òå±©Â¶µÄhttps¶Ë¿Ú
+      # ï¿½Ô¶ï¿½ï¿½å±©Â¶ï¿½ï¿½httpsï¿½Ë¿ï¿½
       nodePort: 443
     - name: proxied-tcp-3306
       nodePort: 12315
@@ -318,8 +319,8 @@ metadata:
   name: ingress-nginx-controller
   namespace: ingress-nginx
 spec:
-# Ö÷½ÚµãÒ»°ãÓÐÎÛµã²»ÔÊÐí²¿Êðpod£¬ÐèÏÈÈ¥³ýÖ÷½ÚµãÎÛµã£¬ºóÔÚ²¿Êð¶à¸ö¸±±¾
-# replicas¸ù¾Ý½ÚµãÊý£¬ÉèÖÃ¸±±¾Êý¡£¿ÉÒÔÖ±½ÓÖ¸¶¨Ä³Ò»¸ö½Úµã
+# ï¿½ï¿½ï¿½Úµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ûµã²»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½podï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½Ûµã£¬ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+# replicasï¿½ï¿½ï¿½Ý½Úµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ö¸ï¿½ï¿½Ä³Ò»ï¿½ï¿½ï¿½Úµï¿½
   replicas: 2
   selector:
     matchLabels:
@@ -336,7 +337,7 @@ spec:
         app.kubernetes.io/component: controller
     spec:
       dnsPolicy: ClusterFirst
-      # Ôö¼Ó hostNetwork: true£¬ÒâË¼ÊÇ¿ªÆôÖ÷»úÍøÂçÄ£Ê½£¬±©Â¶ Nginx ·þÎñ¶Ë¿Ú 80 ¿ÉÒÔÍ¨¹ýÖ÷»úµØÖ··ÃÎÊ
+      # ï¿½ï¿½ï¿½ï¿½ hostNetwork: trueï¿½ï¿½ï¿½ï¿½Ë¼ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½Â¶ Nginx ï¿½ï¿½ï¿½ï¿½Ë¿ï¿½ 80 ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½
       #hostNetwork: true
       containers:
         - name: controller
